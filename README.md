@@ -31,14 +31,31 @@ W systemie są trzy rodzaje użytkowników:
 ```
 README.md
 .gitignore
+index.php                 – przekierowanie do folderu public
 /config
     config.example.php    – wzór pliku z ustawieniami (bez haseł)
 /database
     database.sql          – baza danych z danymi testowymi
 /docs
     erd.png               – schemat bazy danych
-/public                   – pliki strony
-    index.php
+/includes                 – wspólny kod PHP (niedostępny z przeglądarki)
+    bootstrap.php         – start każdej strony: ustawienia, sesja, obsługa błędów
+    db.php                – połączenie z bazą (PDO)
+    session.php           – bezpieczne ustawienia sesji
+    csrf.php              – ochrona formularzy tokenem CSRF
+    auth.php              – logowanie, wylogowanie, kontrola ról
+    validation.php        – sprawdzanie danych z formularzy
+    helpers.php           – funkcje pomocnicze (e(), url(), komunikaty)
+    /layout               – nagłówek, stopka, strona błędu, brak dostępu
+/public                   – strony widoczne w przeglądarce
+    index.php             – strona główna
+    rejestracja.php
+    logowanie.php
+    wyloguj.php
+    profil.php            – edycja danych i zmiana hasła
+    /klient/index.php     – panel klienta
+    /pracownik/index.php  – panel pracownika
+    /admin/index.php      – panel administratora
     /css
     /js
     /images
@@ -52,9 +69,11 @@ Potrzebny jest XAMPP (albo inny serwer z PHP i MySQL 8.0.16 lub nowszym).
 2. W panelu XAMPP włącz **Apache** i **MySQL**.
 3. Wejdź na `http://localhost/phpmyadmin`, otwórz zakładkę **Import** i wczytaj plik `database/database.sql`. Baza `swisscar_rezerwacje` utworzy się sama, razem z danymi testowymi.
 4. Skopiuj plik `config/config.example.php`, nazwij kopię `config.php` i wpisz w niej dane do bazy (w XAMPP zwykle użytkownik `root` bez hasła).
-5. Otwórz w przeglądarce: `http://localhost/NAZWA_KATALOGU/public/`
+5. Otwórz w przeglądarce: `http://localhost/NAZWA_KATALOGU/` (strona sama przeniesie do folderu `public`).
 
 > Plik `config/config.php` nie trafia na GitHuba (jest w `.gitignore`), więc hasła do bazy nie są publiczne.
+
+> Ustawienie `debug` w `config.php`: `true` pokazuje szczegóły błędów (tylko podczas pisania kodu), `false` pokazuje użytkownikowi tylko ogólny komunikat.
 
 # Testowe dane logowania
 
@@ -71,6 +90,51 @@ Hasło do wszystkich kont: **`Test123!`**
 | Klient (konto nieaktywne) | robert.mazur@example.com |
 
 Hasła w bazie są zaszyfrowane funkcją `password_hash()`, a nie zapisane zwykłym tekstem.
+
+# Konta i logowanie
+
+- **Rejestracja** – formularz z imieniem, nazwiskiem, e-mailem, telefonem, hasłem i powtórzeniem hasła. Nowe konto zawsze dostaje rolę klienta.
+- **Logowanie** – e-mailem i hasłem. Po zalogowaniu każda rola trafia do swojego panelu:
+
+| Rola | Panel |
+|---|---|
+| Klient | `public/klient/index.php` |
+| Pracownik | `public/pracownik/index.php` |
+| Administrator | `public/admin/index.php` |
+
+- **Wylogowanie** – przyciskiem „Wyloguj” w menu.
+- **Profil** – każdy zalogowany użytkownik może zmienić imię, nazwisko, e-mail i telefon oraz zmienić hasło (po podaniu obecnego).
+
+### Zasady sprawdzania danych (po stronie serwera)
+
+| Pole | Zasada |
+|---|---|
+| Imię, nazwisko | wymagane, od 2 znaków, tylko litery (także polskie), spacja i myślnik |
+| E-mail | wymagany, poprawny format, nie może być zajęty przez inne konto |
+| Telefon | wymagany, 9–15 cyfr, może zaczynać się od `+` (spacje i myślniki są usuwane) |
+| Hasło | min. 8 znaków, co najmniej jedna litera i jedna cyfra |
+| Powtórzone hasło | musi być takie samo jak hasło |
+
+Formularz pokazuje błąd pod każdym źle wypełnionym polem i zachowuje wpisane dane (oprócz haseł).
+
+# Bezpieczeństwo
+
+| Zagrożenie | Jak się bronimy | Gdzie w kodzie |
+|---|---|---|
+| Wyciek haseł z bazy | hasła zapisane jako hash (`password_hash()`), sprawdzane przez `password_verify()` | `auth.php`, `rejestracja.php` |
+| SQL injection | każde zapytanie z danymi od użytkownika to prepared statement (PDO) | wszystkie pliki z zapytaniami |
+| Wejście do cudzego panelu przez wpisanie adresu | każda chroniona strona zaczyna się od `require_login()` lub `require_role()`; zła rola dostaje stronę „Brak dostępu” (kod 403) | `auth.php` |
+| Rejestracja jako administrator | rola nie jest pobierana z formularza, zawsze `klient` | `rejestracja.php` |
+| Zmiana cudzych danych w profilu | id użytkownika pochodzi z sesji, nie z formularza | `profil.php` |
+| XSS (wstrzyknięcie kodu HTML/JS) | każdy tekst wypisywany na stronie przechodzi przez funkcję `e()` (`htmlspecialchars`) | `helpers.php`, widoki |
+| CSRF (wysłanie formularza z obcej strony) | ukryty token w każdym formularzu POST, sprawdzany na serwerze | `csrf.php` |
+| Przejęcie sesji | nowy identyfikator sesji po zalogowaniu i zmianie hasła; ciasteczko `HttpOnly` i `SameSite` | `auth.php`, `session.php` |
+| Pozostawiony zalogowany komputer | automatyczne wylogowanie po 30 minutach bez aktywności | `auth.php` |
+| Zablokowane konto nadal zalogowane | dane użytkownika są sprawdzane w bazie przy każdym wejściu na stronę | `auth.php` |
+| Sprawdzanie, czy e-mail ma konto | ten sam komunikat przy złym e-mailu i złym haśle | `auth.php` |
+| Ujawnienie szczegółów błędu | użytkownik widzi ogólny komunikat, szczegóły trafiają do logu serwera | `bootstrap.php` |
+| Dostęp do plików z kodem i konfiguracją | pliki `.htaccess` blokują foldery `config`, `includes` i `database` | `.htaccess` |
+| Hasło do bazy na GitHubie | `config.php` jest w `.gitignore` | `.gitignore` |
 
 # Baza danych
 
@@ -101,6 +165,7 @@ Hasła w bazie są zaszyfrowane funkcją `password_hash()`, a nie zapisane zwyk�
 - **Ceny jako `DECIMAL(8,2)`** – typ `FLOAT` może źle zaokrąglać kwoty, a przy pieniądzach nie może być błędów.
 - **Hasło w polu `VARCHAR(255)`** – zaszyfrowane hasło ma teraz ok. 60 znaków, ale w przyszłości może być dłuższe.
 - **Cena zapisana w rezerwacji** – gdy administrator zmieni cenę usługi, stare rezerwacje zachowają cenę z dnia rezerwacji.
+- **Godzina końca zapisana w rezerwacji** – gdy administrator zmieni czas trwania usługi, stare rezerwacje nie zmienią długości. Dzięki temu łatwo też sprawdzić, czy nowy termin nie nakłada się na inny.
 - **Dane nie są usuwane** – usługi, kategorie, pracowników i użytkowników można wyłączyć, a rezerwacje się anuluje. Dzięki temu nie tracimy historii rezerwacji.
 - **Usuwanie powiązanych danych** – nie da się usunąć czegoś, do czego są przypisane rezerwacje (`RESTRICT`). Po usunięciu pracownika jego godziny pracy i przypisane usługi usuwają się same (`CASCADE`).
 - **Zabezpieczenia w bazie**:
@@ -119,6 +184,14 @@ W bazie są: 1 administrator, 3 pracowników z różnymi godzinami pracy (jeden 
 
 # Funkcje dodatkowe
 
+Zrobione:
+
+- **Tokeny CSRF** we wszystkich formularzach.
+- **Zmiana hasła** tylko po podaniu obecnego hasła.
+- **Automatyczne wylogowanie** po 30 minutach bez aktywności.
+- **Natychmiastowa blokada konta** – wyłączony użytkownik jest wylogowywany przy następnym wejściu na stronę.
+- **Aktualizacja hashy haseł** – przy logowaniu stary hash jest zamieniany na nowszy, jeśli PHP zmieni algorytm.
+
 Planowane (lista będzie uzupełniana):
 
 - 
@@ -129,7 +202,7 @@ Planowane (lista będzie uzupełniana):
 | Etap | Termin | Zakres | Status |
 |---|---|---|---|
 | 1 | 25.09.2026 | Projekt, GitHub i baza danych | ✅ ukończony |
-| 2 | 16.10.2026 | Użytkownicy i logowanie | ⏳ |
+| 2 | 16.10.2026 | Użytkownicy i logowanie | ✅ ukończony |
 | 3 | 06.11.2026 | Panel administracyjny | ⏳ |
 | 4 | 20.11.2026 | Klient i rezerwacje | ⏳ |
 | 5 | 27.11.2026 | Kompletny projekt i prezentacja | ⏳ |
