@@ -1,5 +1,4 @@
 <?php
-// Górna część każdej strony. Przed dołączeniem ustaw zmienną $tytul.
 $zalogowany = current_user();
 ?>
 <!DOCTYPE html>

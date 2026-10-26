@@ -1,11 +1,3 @@
-DROP DATABASE IF EXISTS swisscar_rezerwacje;
-CREATE DATABASE swisscar_rezerwacje
-    DEFAULT CHARACTER SET utf8mb4
-    COLLATE utf8mb4_polish_ci;
-USE swisscar_rezerwacje;
-
-SET NAMES utf8mb4;
-
 CREATE TABLE uzytkownicy (
     id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     imie            VARCHAR(50)  NOT NULL,

@@ -25,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$dataErrors) {
             try {
-                // id bierzemy z sesji, nie z formularza - można zmienić tylko własne dane.
                 $stmt = db()->prepare(
                     'UPDATE uzytkownicy SET imie = ?, nazwisko = ?, email = ?, telefon = ? WHERE id = ?'
                 );
