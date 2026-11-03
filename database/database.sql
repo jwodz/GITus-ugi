@@ -114,6 +114,50 @@ CREATE INDEX idx_rezerwacje_pracownik_data ON rezerwacje (pracownik_id, data_rez
 CREATE INDEX idx_rezerwacje_data_status ON rezerwacje (data_rezerwacji, status);
 CREATE INDEX idx_uslugi_kategoria_aktywna ON uslugi (kategoria_id, aktywna);
 
+CREATE TABLE dni_wolne (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    pracownik_id  INT UNSIGNED NOT NULL,
+    data_od       DATE         NOT NULL,
+    data_do       DATE         NOT NULL,
+    powod         VARCHAR(150) NULL,
+    PRIMARY KEY (id),
+    INDEX idx_dni_wolne_pracownik_daty (pracownik_id, data_od, data_do),
+    CONSTRAINT fk_dni_wolne_pracownik
+        FOREIGN KEY (pracownik_id) REFERENCES pracownicy (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_dni_wolne_daty CHECK (data_do >= data_od)
+) ENGINE=InnoDB;
+
+CREATE TABLE historia_statusow (
+    id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    rezerwacja_id  INT UNSIGNED NOT NULL,
+    stary_status   ENUM('oczekujaca', 'potwierdzona', 'zrealizowana', 'anulowana') NULL,
+    nowy_status    ENUM('oczekujaca', 'potwierdzona', 'zrealizowana', 'anulowana') NOT NULL,
+    zmienil_id     INT UNSIGNED NULL,
+    utworzono      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_historia_rezerwacja (rezerwacja_id, utworzono),
+    CONSTRAINT fk_historia_rezerwacja
+        FOREIGN KEY (rezerwacja_id) REFERENCES rezerwacje (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_historia_zmienil
+        FOREIGN KEY (zmienil_id) REFERENCES uzytkownicy (id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE dziennik_operacji (
+    id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    uzytkownik_id  INT UNSIGNED NULL,
+    akcja          VARCHAR(50)  NOT NULL,
+    opis           VARCHAR(255) NOT NULL,
+    utworzono      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_dziennik_utworzono (utworzono),
+    CONSTRAINT fk_dziennik_uzytkownik
+        FOREIGN KEY (uzytkownik_id) REFERENCES uzytkownicy (id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 INSERT INTO uzytkownicy (id, imie, nazwisko, email, haslo_hash, telefon, rola, aktywny) VALUES
 (1, 'Anna',      'Kowalska',    'admin@swisscar.pl',               '$2y$10$gF0NuUaNjIfks/FMob4mWersZ.AkZXjqubG1i.lDAG6l0djzbn79u', '500100100', 'administrator', 1),
 (2, 'Marta',     'Nowak',       'marta.nowak@swisscar.pl',         '$2y$10$gF0NuUaNjIfks/FMob4mWersZ.AkZXjqubG1i.lDAG6l0djzbn79u', '500200201', 'pracownik',     1),
@@ -175,4 +219,32 @@ INSERT INTO rezerwacje (uzytkownik_id, pracownik_id, usluga_id, data_rezerwacji,
 (5, 2, 2,  '2026-12-03', '11:30', '12:00', 100.00, 'oczekujaca',   NULL),
 (6, 3, 6,  '2026-12-04', '13:00', '14:00', 200.00, 'oczekujaca',   'BMW X3 - świeci kontrolka silnika.'),
 (7, 3, 3,  '2026-12-05', '09:00', '09:30',  80.00, 'anulowana',    NULL),
-(8, 1, 3,  '2026-12-07', '15:00', '15:30',  80.00, 'oczekujaca',   NULL);
+(8, 1, 3,  '2026-12-07', '15:00', '15:30',  80.00, 'oczekujaca',   NULL),
+(7, 1, 1,  '2026-10-05', '09:00', '10:00', 150.00, 'zrealizowana', 'Volvo XC60, 2020 r.'),
+(8, 2, 7,  '2026-10-06', '10:00', '11:30', 300.00, 'zrealizowana', NULL),
+(5, 3, 4,  '2026-10-07', '12:00', '12:45', 120.00, 'zrealizowana', 'VIN: WBA8E9C50JA000002'),
+(6, 1, 2,  '2026-10-09', '14:00', '14:30', 100.00, 'zrealizowana', NULL),
+(7, 3, 6,  '2026-10-14', '15:00', '16:00', 200.00, 'zrealizowana', NULL),
+(8, 2, 9,  '2026-10-20', '12:00', '13:00', 250.00, 'zrealizowana', NULL),
+(5, 1, 3,  '2026-10-22', '10:00', '10:30',  80.00, 'anulowana',    'Klient przełożył termin.'),
+(6, 3, 5,  '2026-10-30', '12:00', '14:00', 450.00, 'zrealizowana', 'Mercedes GLC w Bernie.'),
+(7, 1, 1,  '2026-11-04', '09:00', '10:00', 150.00, 'potwierdzona', NULL),
+(8, 1, 2,  '2026-11-04', '10:00', '10:30', 100.00, 'oczekujaca',   'Toyota RAV4 hybryda.'),
+(5, 2, 8,  '2026-11-05', '11:00', '11:45', 180.00, 'potwierdzona', NULL),
+(6, 3, 4,  '2026-11-06', '13:00', '13:45', 120.00, 'oczekujaca',   NULL),
+(7, 2, 10, '2026-11-07', '10:00', '10:45',   0.00, 'oczekujaca',   'Odbiór Volvo XC60.'),
+(8, 3, 3,  '2026-11-09', '12:00', '12:30',  80.00, 'oczekujaca',   NULL),
+(5, 1, 10, '2026-11-12', '15:00', '15:45',   0.00, 'potwierdzona', 'Odbiór Audi A6.');
+
+INSERT INTO historia_statusow (rezerwacja_id, stary_status, nowy_status, zmienil_id, utworzono) VALUES
+(7,  NULL,         'oczekujaca',   5, '2026-10-01 18:20:00'),
+(7,  'oczekujaca', 'potwierdzona', 1, '2026-10-02 09:05:00'),
+(14, NULL,         'oczekujaca',   7, '2026-10-01 20:10:00'),
+(14, 'oczekujaca', 'potwierdzona', 2, '2026-10-02 08:30:00'),
+(14, 'potwierdzona', 'zrealizowana', 2, '2026-10-05 10:05:00'),
+(20, NULL,         'oczekujaca',   5, '2026-10-15 12:00:00'),
+(20, 'oczekujaca', 'anulowana',    5, '2026-10-19 16:45:00');
+
+INSERT INTO dni_wolne (pracownik_id, data_od, data_do, powod) VALUES
+(3, '2026-12-21', '2026-12-31', 'Urlop świąteczny'),
+(2, '2026-11-11', '2026-11-11', 'Święto Niepodległości');
