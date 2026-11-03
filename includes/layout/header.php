@@ -17,7 +17,6 @@ $zalogowany = current_user();
             <span class="logo__znak" aria-hidden="true">+</span>
             SwissCar <span class="logo__dopisek">Import</span>
         </a>
-
         <nav class="menu" aria-label="Menu główne">
             <a href="<?= e(url('index.php')) ?>">Strona główna</a>
             <?php if ($zalogowany): ?>
@@ -38,8 +37,12 @@ $zalogowany = current_user();
         </nav>
     </div>
 </header>
-
 <main class="strona">
+    <?php
+    if (isset($zakladka)) {
+        require __DIR__ . '/admin-menu.php';
+    }
+    ?>
     <?php foreach (flash_get() as $komunikat): ?>
         <div class="komunikat komunikat--<?= e($komunikat['typ']) ?>" role="status"><?= e($komunikat['tresc']) ?></div>
     <?php endforeach; ?>

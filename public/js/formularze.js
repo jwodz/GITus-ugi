@@ -32,4 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
         wrapper.appendChild(input);
         wrapper.appendChild(button);
     });
+
+    document.querySelectorAll('form[data-potwierdz]').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+            if (!window.confirm(form.dataset.potwierdz)) {
+                event.preventDefault();
+            }
+        });
+    });
 });
