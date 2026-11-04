@@ -1,12 +1,12 @@
 <?php
-
-
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/validation.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/panel.php';
+require_once __DIR__ . '/reservations.php';
 
 date_default_timezone_set('Europe/Warsaw');
 
