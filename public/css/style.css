@@ -805,7 +805,318 @@ textarea:focus-visible {
     .lista-zdarzen__kto { margin-left: 0; }
     .tabela th, .tabela td { padding: 0.6rem 0.75rem; }
 
-    /* Szeroka tabela przewija się w bok wewnątrz karty, zamiast ściskać kolumny. */
     .tabela-kontener .tabela th,
     .tabela-kontener .tabela td { white-space: nowrap; }
+}
+
+.kroki {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    counter-reset: krok;
+}
+
+.kroki__krok {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem 0.4rem 0.45rem;
+    border-radius: 999px;
+    background: var(--karta);
+    border: 1px solid var(--ramka);
+    color: var(--tekst-jasny);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.kroki__krok a {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.kroki__numer {
+    display: inline-grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: var(--tlo);
+    font-size: 0.8rem;
+}
+
+.kroki__krok--zrobiony { color: var(--zielony); border-color: #b9e0cb; }
+.kroki__krok--zrobiony .kroki__numer { background: var(--zielony); color: #fff; }
+.kroki__krok--zrobiony a:hover { text-decoration: underline; }
+.kroki__krok--aktywny { background: var(--granat); border-color: var(--granat); color: #fff; }
+.kroki__krok--aktywny .kroki__numer { background: var(--czerwony); color: #fff; }
+
+.wybor-podsumowanie {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background: var(--info-tlo);
+    border-radius: var(--promien);
+    color: #173e72;
+}
+
+.siatka__grupa {
+    grid-column: 1 / -1;
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tekst-jasny);
+}
+
+.karta-wyboru {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    color: var(--tekst);
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+.karta-wyboru:hover { border-color: var(--czerwony); transform: translateY(-2px); color: var(--tekst); }
+.karta-wyboru__tytul { color: var(--granat); font-size: 1.05rem; }
+.karta-wyboru__podtytul { color: var(--czerwony); font-weight: 600; font-size: 0.9rem; }
+.karta-wyboru__opis { color: var(--tekst-jasny); font-size: 0.9rem; flex: 1; }
+.karta-wyboru__meta { font-size: 0.9rem; padding-top: 0.5rem; border-top: 1px solid var(--ramka); }
+
+.kalendarz-uklad {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.kalendarz__legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--tekst-jasny);
+    margin-bottom: 0.75rem;
+}
+
+.kalendarz__kropka {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 3px;
+    vertical-align: -1px;
+}
+
+.kalendarz__kropka--wolny { background: var(--zielony-tlo); border: 1px solid var(--zielony); }
+.kalendarz__kropka--brak { background: #eceef2; }
+
+.kalendarz__siatka {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.3rem;
+}
+
+.kalendarz__naglowek {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--tekst-jasny);
+    padding-bottom: 0.2rem;
+}
+
+.kalendarz__dzien {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    border: 2px solid transparent;
+}
+
+.kalendarz__dzien--poza { color: #c4c9d2; }
+.kalendarz__dzien--brak { background: #f3f4f6; color: #9aa1ad; }
+
+.kalendarz__dzien--wolny {
+    background: var(--zielony-tlo);
+    color: #14532d;
+    font-weight: 700;
+}
+
+.kalendarz__dzien--wolny:hover { border-color: var(--zielony); color: #14532d; }
+.kalendarz__dzien--dzis { box-shadow: inset 0 0 0 1px var(--granat); }
+
+.kalendarz__dzien--wybrany,
+.kalendarz__dzien--wybrany:hover {
+    background: var(--granat);
+    border-color: var(--granat);
+    color: #fff;
+}
+
+.kalendarz__ile { font-size: 0.7rem; font-weight: 400; opacity: 0.8; }
+
+.godziny-wybor { position: sticky; top: 1rem; }
+
+.godziny-wybor__lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    gap: 0.5rem;
+}
+
+.przycisk-godzina {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.55rem 0.4rem;
+    border: 2px solid var(--granat);
+    border-radius: 8px;
+    color: var(--granat);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.przycisk-godzina small { font-weight: 400; font-size: 0.75rem; color: var(--tekst-jasny); }
+.przycisk-godzina:hover,
+.przycisk-godzina--wybrana { background: var(--granat); color: #fff; }
+.przycisk-godzina:hover small,
+.przycisk-godzina--wybrana small { color: #dfe3ea; }
+
+.zakladki {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--ramka);
+}
+
+.zakladki a {
+    padding: 0.55rem 1rem;
+    margin-bottom: -2px;
+    border-bottom: 3px solid transparent;
+    color: var(--tekst-jasny);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.zakladki a:hover { color: var(--granat); }
+.zakladki a.aktywna { color: var(--granat); border-bottom-color: var(--czerwony); }
+.zakladki__liczba {
+    display: inline-block;
+    min-width: 1.4rem;
+    padding: 0 0.35rem;
+    margin-left: 0.25rem;
+    border-radius: 999px;
+    background: var(--tlo);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.oferta-kategorie {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+}
+
+.oferta-kategorie a {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--ramka);
+    border-radius: 999px;
+    background: var(--karta);
+    color: var(--tekst);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.oferta-kategorie a:hover { border-color: var(--granat); }
+.oferta-kategorie a.aktywna { background: var(--granat); border-color: var(--granat); color: #fff; }
+
+.usluga-karta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.usluga-karta__kategoria {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--czerwony);
+}
+
+.usluga-karta h2 { margin: 0; }
+.usluga-karta h2 a { color: var(--granat); text-decoration: none; }
+.usluga-karta h2 a:hover { color: var(--czerwony); }
+.usluga-karta__opis { color: var(--tekst-jasny); flex: 1; margin: 0; }
+
+.usluga-karta__dol {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--ramka);
+}
+
+.cena { font-size: 1.15rem; font-weight: 700; color: var(--granat); }
+
+.potwierdzenie {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.potwierdzenie__naglowek {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--granat);
+}
+
+.potwierdzenie__numer { font-size: 0.9rem; color: var(--tekst-jasny); text-align: right; }
+
+.przyciski-rzad {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+    .kalendarz-uklad { grid-template-columns: 1fr; }
+    .godziny-wybor { position: static; }
+}
+
+@media (max-width: 460px) {
+    .kalendarz__dzien { min-height: 2.6rem; font-size: 0.8rem; }
+    .kalendarz__ile { display: none; }
+    .godziny-wybor__lista { grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
+    .przycisk-godzina { padding: 0.45rem 0.2rem; }
+    .kroki__krok { font-size: 0.8rem; padding-right: 0.6rem; }
+}
+
+@media print {
+    .naglowek,
+    .stopka,
+    .komunikat,
+    .przyciski-rzad,
+    .admin-menu { display: none; }
+    body { background: #fff; }
+    .karta { box-shadow: none; border: 0; }
+    .strona { padding: 0; }
 }
