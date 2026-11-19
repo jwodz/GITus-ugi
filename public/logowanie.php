@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($error === null) {
         $user = current_user(true);
         flash_set('sukces', 'Witaj, ' . $user['imie'] . '!');
-        redirect(panel_url($user['rola']));
+        redirect(after_login_url($user['rola']));
     }
 }
 
