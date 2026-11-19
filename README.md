@@ -1,9 +1,5 @@
 # SwissCar Import – system rezerwacji usług
 
-# Link do strony
-
-gitus-ugi.infinityfreeapp.com
-
 # Autorzy
 
 Imie i Nazwisko / GitHub
@@ -19,8 +15,8 @@ Sprowadzenie auta trwa kilka tygodni, dlatego w systemie rezerwuje się pojedync
 
 W systemie są trzy rodzaje użytkowników:
 
-- **Klient** – zakłada konto, przegląda ofertę, rezerwuje termin (usługa → pracownik → data → godzina → potwierdzenie), widzi swoje rezerwacje, może anulować przyszłą rezerwację i zmienić dane w profilu.
-- **Pracownik** – widzi swoje wizyty na dziś, przyszłe wizyty i historię oraz zmienia ich status.
+- **Klient** – zakłada konto, przegląda ofertę, rezerwuje termin (usługa → pracownik → data → godzina → potwierdzenie) w graficznym kalendarzu, widzi swoje rezerwacje, może anulować lub przełożyć przyszłą wizytę, pobrać potwierdzenie (wydruk / PDF) i dodać wizytę do kalendarza w telefonie.
+- **Pracownik** – widzi swoje wizyty na dziś, przyszłe wizyty i historię, szczegóły wizyty i dane klienta, zmienia status obsługiwanych wizyt, widzi swój grafik i dni wolne.
 - **Administrator** – zarządza użytkownikami, pracownikami, kategoriami, usługami i godzinami pracy, widzi wszystkie rezerwacje i statystyki.
 
 # Technologie
@@ -52,15 +48,27 @@ index.php                 – przekierowanie do folderu public
     helpers.php           – funkcje pomocnicze (e(), url(), komunikaty)
     panel.php             – dziennik operacji, parametry z adresu, stronicowanie list
     reservations.php      – statusy rezerwacji, historia zmian, filtry, formatowanie dat i cen
-    /layout               – nagłówek, stopka, menu panelu admina, strona błędu, brak dostępu
+    availability.php      – wolne godziny, zapis i przełożenie rezerwacji z blokadą terminu
+    /layout               – nagłówek, stopka, menu panelu admina, kalendarz, strona błędu, brak dostępu
 /public                   – strony widoczne w przeglądarce
     index.php             – strona główna
+    oferta.php            – oferta z kategoriami i wyszukiwarką
+    usluga.php            – szczegóły usługi i dostępność pracowników
     rejestracja.php
     logowanie.php
     wyloguj.php
     profil.php            – edycja danych i zmiana hasła
-    /klient/index.php     – panel klienta
-    /pracownik/index.php  – panel pracownika
+    /klient
+        index.php         – moje rezerwacje (nadchodzące, zakończone), anulowanie
+        rezerwuj.php      – rezerwacja krok po kroku z kalendarzem
+        przeloz.php       – przełożenie wizyty na inny termin
+        potwierdzenie.php – potwierdzenie rezerwacji do druku / PDF
+        kalendarz.php     – plik .ics do kalendarza w telefonie
+    /pracownik
+        index.php         – wizyty: dziś, nadchodzące, historia; grafik
+        wizyta.php        – szczegóły wizyty i zmiana statusu
+    /api
+        godziny.php       – wolne godziny w formacie JSON (dla kalendarza, AJAX)
     /admin                – panel administratora:
         index.php         – pulpit ze statystykami i wykresami
         rezerwacje.php    – lista rezerwacji z filtrami
@@ -74,7 +82,11 @@ index.php                 – przekierowanie do folderu public
         dziennik.php      – dziennik operacji administratora
     /css
     /js
+        formularze.js     – podpowiedzi w formularzach, okienka potwierdzenia
+        rezerwacja.js     – wczytywanie wolnych godzin bez przeładowania strony
     /images
+/tests
+    testy.php             – testy automatyczne (uruchamiane z wiersza poleceń)
 ```
 
 # Instrukcja uruchomienia
@@ -88,6 +100,8 @@ Potrzebny jest XAMPP (albo inny serwer z PHP i MySQL 8.0.16 lub nowszym).
 5. Otwórz w przeglądarce: `http://localhost/NAZWA_KATALOGU/` (strona sama przeniesie do folderu `public`).
 
 > Plik `config/config.php` nie trafia na GitHuba (jest w `.gitignore`), więc hasła do bazy nie są publiczne.
+
+> Na hostingu, na którym nie można tworzyć baz poleceniem `CREATE DATABASE` (np. InfinityFree), usuń z początku `database.sql` polecenia `DROP DATABASE`, `CREATE DATABASE` i `USE`, wybierz w phpMyAdmin swoją bazę i dopiero wtedy importuj. Każda tabela ma ustawione kodowanie `utf8mb4_polish_ci`, więc polskie znaki działają także wtedy.
 
 > Ustawienie `debug` w `config.php`: `true` pokazuje szczegóły błędów (tylko podczas pisania kodu), `false` pokazuje użytkownikowi tylko ogólny komunikat.
 
@@ -107,6 +121,16 @@ Hasło do wszystkich kont: **`Test123!`**
 
 Hasła w bazie są zaszyfrowane funkcją `password_hash()`, a nie zapisane zwykłym tekstem.
 
+# Testy automatyczne
+
+W folderze `tests` jest plik z 44 testami najważniejszej logiki: wykrywania kolizji (dokładnie przykład z regulaminu), wyznaczania wolnych godzin, zmian statusu, walidacji danych i zabezpieczeń. Uruchomienie (XAMPP → **Shell**, w folderze projektu):
+
+```
+php tests/testy.php
+```
+
+Na końcu pojawia się wynik, np. `Wynik: 44 zaliczonych, 0 niezaliczonych`. Plik nie działa z przeglądarki (zwraca 404).
+
 # Konta i logowanie
 
 - **Rejestracja** – formularz z imieniem, nazwiskiem, e-mailem, telefonem, hasłem i powtórzeniem hasła. Nowe konto zawsze dostaje rolę klienta.
@@ -118,6 +142,8 @@ Hasła w bazie są zaszyfrowane funkcją `password_hash()`, a nie zapisane zwyk�
 | Pracownik | `public/pracownik/index.php` |
 | Administrator | `public/admin/index.php` |
 
+- **Powrót po zalogowaniu** – gdy niezalogowana osoba kliknie np. „Zarezerwuj” przy usłudze, po zalogowaniu wraca dokładnie do tej rezerwacji (ale nigdy do panelu innej roli).
+- **Limit prób logowania** – po 5 błędnych hasłach do jednego konta (albo 20 z jednego adresu IP) logowanie jest blokowane na 15 minut. Udane logowanie czyści licznik.
 - **Wylogowanie** – przyciskiem „Wyloguj” w menu.
 - **Profil** – każdy zalogowany użytkownik może zmienić imię, nazwisko, e-mail i telefon oraz zmienić hasło (po podaniu obecnego).
 
@@ -154,7 +180,66 @@ Formularz pokazuje błąd pod każdym źle wypełnionym polem i zachowuje wpisan
 | Utrata historii przez usunięcie danych | usługi z rezerwacjami i kategorie z usługami nie dają się usunąć – można je tylko dezaktywować | `kategorie.php`, `uslugi.php` |
 | Formuły w pliku CSV (CSV injection) | wartości zaczynające się od `= + - @` dostają apostrof, więc Excel nie uruchomi ich jako formuły | `eksport.php` |
 | Przypadkowe kliknięcie „Usuń” | okienko z pytaniem przed usunięciem, blokadą i anulowaniem | `formularze.js` |
+| Zgadywanie haseł (brute force) | blokada na 15 minut po 5 błędnych próbach dla konta lub 20 z jednego IP; próby zapisane w tabeli `proby_logowania` | `auth.php` |
+| Rezerwacja zajętego terminu przez zmianę danych formularza | godzina jest sprawdzana na serwerze ponownie tuż przed zapisem: godziny pracy, czas usługi, dni wolne, inne wizyty, przeszłość | `availability.php` |
+| Dwie osoby rezerwują ten sam termin w tej samej chwili | zapis w transakcji z blokadą wiersza pracownika (`SELECT … FOR UPDATE`) – druga osoba czeka i dostaje komunikat „termin został przed chwilą zajęty” | `availability.php` |
+| Anulowanie / przełożenie / podgląd cudzej rezerwacji | każde zapytanie ma warunek `uzytkownik_id = ?` z sesji; cudza rezerwacja wygląda jak nieistniejąca | `klient/*.php` |
+| Pracownik zarządza wizytami innego pracownika | wizyta jest wczytywana tylko z warunkiem `pracownik = zalogowany` | `pracownik/wizyta.php` |
+| Klient dubluje swoje wizyty | klient nie może mieć dwóch wizyt nakładających się w czasie, nawet u różnych pracowników | `availability.php` |
+| Osadzenie strony w obcej ramce, podmiana typu pliku | nagłówki `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy` | `bootstrap.php` |
+| Uruchomienie testów przez internet | plik testów działa tylko z wiersza poleceń | `tests/testy.php` |
 | Hasło do bazy na GitHubie | `config.php` jest w `.gitignore` | `.gitignore` |
+
+# Oferta i rezerwacja
+
+### Oferta
+- `oferta.php` – lista aktywnych usług (tylko z aktywnych kategorii), filtrowanie po kategorii, wyszukiwarka, stronicowanie.
+- `usluga.php` – nazwa, opis, kategoria, cena, czas trwania i dostępność: którzy pracownicy wykonują usługę, ich najbliższy wolny termin i liczba dni z wolnymi godzinami w ciągu 2 tygodni.
+
+### Proces rezerwacji (`klient/rezerwuj.php`)
+
+Zawsze w kolejności: **usługa → pracownik → data → godzina → potwierdzenie**. U góry widać kroki, a do poprzednich można wrócić kliknięciem.
+
+1. **Usługa** – tylko aktywne usługi, które ktoś wykonuje.
+2. **Pracownik** – tylko aktywni pracownicy wykonujący wybraną usługę, z najbliższym wolnym terminem.
+3. **Data** – graficzny kalendarz na 60 dni: zielone dni mają wolne godziny (liczba w kratce), szare nie.
+4. **Godzina** – po kliknięciu dnia wolne godziny wczytują się bez przeładowania strony (AJAX, `api/godziny.php`). Bez JavaScriptu działa to zwykłym linkiem.
+5. **Potwierdzenie** – podsumowanie, opcjonalny komentarz (np. VIN) i przycisk „Potwierdzam rezerwację”.
+
+### Jak wyznaczane są wolne godziny (`availability.php`)
+
+Dla wybranego pracownika i dnia:
+1. bierzemy jego godziny pracy w ten dzień tygodnia (może być kilka przedziałów, np. z przerwą),
+2. jeśli ma w tym dniu dzień wolny – dzień jest niedostępny,
+3. sprawdzamy kolejne godziny startu co 15 minut; wizyta musi w całości zmieścić się w godzinach pracy (start + czas trwania usługi ≤ koniec pracy),
+4. odrzucamy godziny, które nakładają się na inne wizyty tego pracownika (oprócz anulowanych),
+5. dzisiaj odrzucamy godziny, które już minęły.
+
+**Reguła kolizji (pkt 7.1 regulaminu):** dwie wizyty kolidują, gdy `początek_nowej < koniec_istniejącej` i `koniec_nowej > początek_istniejącej`. Dla wizyty 10:00–11:00 blokuje to 9:30–10:30, 10:00–11:00, 10:15–10:45, 10:30–11:30 i 9:30–11:30, a dopuszcza wizyty kończące się o 10:00 i zaczynające o 11:00. Sprawdzają to testy automatyczne.
+
+### Zapis rezerwacji
+
+1. Serwer sprawdza wszystko jeszcze raz (usługa aktywna, pracownik wykonuje usługę, data w zakresie, poprawny format godziny).
+2. W transakcji blokuje wiersz pracownika (`SELECT … FOR UPDATE`), więc dwie równoczesne rezerwacje u tej samej osoby wykonują się po kolei.
+3. Ponownie wylicza wolne godziny i sprawdza, czy wybrana nadal jest wolna, oraz czy klient nie ma w tym czasie innej wizyty.
+4. Zapisuje rezerwację (koniec liczony z czasu usługi, cena z dnia rezerwacji, status „oczekująca”) i wpis w historii statusów.
+5. Przy kolizji klient widzi czytelny komunikat i wraca do wyboru godziny – nie ma błędu aplikacji.
+
+# Panel klienta
+
+- **Nadchodzące** i **Zakończone i anulowane** – dla każdej wizyty: usługa, pracownik, data, godzina, cena, status.
+- **Anuluj** – tylko własna, przyszła, nieanulowana wizyta (z okienkiem potwierdzenia); zapis w historii statusów.
+- **Przełóż** – wybór nowego terminu w tym samym kalendarzu (własna wizyta nie blokuje sama siebie), ta sama cena i długość; wizyta wraca do statusu „oczekująca”.
+- **Potwierdzenie** – strona do wydruku lub zapisania jako PDF (przycisk „Drukuj / zapisz jako PDF”).
+- **Dodaj do kalendarza** – plik `.ics` z przypomnieniem godzinę przed wizytą (działa w Google Calendar, Outlook, iPhone).
+
+# Panel pracownika
+
+- Zakładki **Dzisiaj**, **Nadchodzące**, **Historia** (ze stronicowaniem) – tylko własne wizyty.
+- Licznik wizyt czekających na potwierdzenie.
+- **Szczegóły wizyty** – dane klienta (telefon, e-mail), komentarz, historia zmian statusu.
+- **Zmiana statusu** – przyciski tylko z dozwolonymi zmianami (np. przyszłej wizyty nie da się oznaczyć jako zrealizowanej).
+- **Mój grafik** i **dni wolne** – podgląd (ustawia je administrator).
 
 # Panel administratora
 
@@ -228,7 +313,8 @@ Dozwolone zmiany statusu rezerwacji:
 | `rezerwacje` | rezerwacje klientów i ich status |
 | `dni_wolne` | urlopy i dni wolne pracowników (od–do, powód) |
 | `historia_statusow` | każda zmiana statusu rezerwacji: stary i nowy status, kto i kiedy |
-| `dziennik_operacji` | operacje wykonane w panelu administratora |
+| `dziennik_operacji` | operacje wykonane w systemie (panel admina, anulowania i przełożenia klientów, zmiany statusów przez pracowników) |
+| `proby_logowania` | nieudane próby logowania (e-mail, adres IP, czas) – do blokady zgadywania haseł |
 
 # Relacje
 
@@ -255,13 +341,15 @@ Dozwolone zmiany statusu rezerwacji:
   - `uslugi (kategoria_id, aktywna)` – pokazywanie aktywnych usług z wybranej kategorii,
   - `dni_wolne (pracownik_id, data_od, data_do)` – sprawdzanie, czy pracownik ma wolne w danym dniu,
   - `historia_statusow (rezerwacja_id, utworzono)` – historia jednej rezerwacji,
-  - `dziennik_operacji (utworzono)` – najnowsze wpisy dziennika.
+  - `dziennik_operacji (utworzono)` – najnowsze wpisy dziennika,
+  - `proby_logowania (email, utworzono)` i `(adres_ip, utworzono)` – liczenie nieudanych prób z ostatnich 15 minut.
+- **Strefa czasowa** – po połączeniu z bazą ustawiamy jej strefę czasową na taką samą jak w PHP, żeby daty z bazy i z PHP się zgadzały także na zagranicznym hostingu.
 - **Historia i dziennik przy usuwaniu kont** – `ON DELETE SET NULL`: wpis zostaje, tylko bez autora.
 - **Zmiana statusu i wpis w historii w jednej transakcji** – nie może się zdarzyć, że status się zmieni, a historia nie.
 
 # Dane testowe
 
-W bazie są: 1 administrator, 3 pracowników z różnymi godzinami pracy (jeden ma przerwę), 5 klientów (jedno konto jest wyłączone), 4 kategorie, 11 usług (jedna wyłączona), 28 rezerwacji z września–grudnia we wszystkich statusach (część z historią zmian statusu) oraz dni wolne dwóch pracowników. Dwie rezerwacje są jedna po drugiej (jedna kończy się, a druga zaczyna o 11:00), żeby pokazać, że takie terminy są dozwolone.
+W bazie są: 1 administrator, 3 pracowników z różnymi godzinami pracy (jeden ma przerwę), 5 klientów (jedno konto jest wyłączone), 4 kategorie, 11 usług (jedna wyłączona), 36 rezerwacji z września–grudnia we wszystkich statusach (w tym wizyty w tygodniu prezentacji 23–27.11) (część z historią zmian statusu) oraz dni wolne dwóch pracowników. Dwie rezerwacje są jedna po drugiej (jedna kończy się, a druga zaczyna o 11:00), żeby pokazać, że takie terminy są dozwolone.
 
 # Funkcje dodatkowe
 
@@ -279,6 +367,17 @@ Zrobione:
 - **Dni wolne i urlopy pracowników** z ostrzeżeniem o kolidujących wizytach.
 - **Kilka przedziałów godzin pracy w jednym dniu** (przerwy).
 - **Zaawansowane filtrowanie i stronicowanie** list w panelu.
+- **Graficzny kalendarz** dostępnych dni z liczbą wolnych godzin.
+- **AJAX** – wolne godziny wczytywane bez przeładowania strony (`api/godziny.php`, JSON).
+- **Automatyczne wyznaczanie wolnych godzin** z uwzględnieniem godzin pracy, przerw, dni wolnych, czasu trwania usługi i innych wizyt.
+- **Przełożenie wizyty** przez klienta.
+- **Obsługa równoczesnej rezerwacji** tego samego terminu (blokada w transakcji).
+- **Potwierdzenie rezerwacji do druku / PDF**.
+- **Dodanie wizyty do kalendarza** (plik `.ics` z przypomnieniem).
+- **Powrót do przerwanej rezerwacji** po zalogowaniu.
+- **Limit prób logowania** (ochrona przed zgadywaniem haseł).
+- **Nagłówki bezpieczeństwa** HTTP.
+- **Testy automatyczne** (`tests/testy.php`, 44 testy).
 
 # Postęp prac
 
@@ -287,5 +386,5 @@ Zrobione:
 | 1 | 25.09.2026 | Projekt, GitHub i baza danych | ✅ ukończony |
 | 2 | 16.10.2026 | Użytkownicy i logowanie | ✅ ukończony |
 | 3 | 06.11.2026 | Panel administracyjny | ✅ ukończony |
-| 4 | 20.11.2026 | Klient i rezerwacje | ⏳ |
-| 5 | 27.11.2026 | Kompletny projekt i prezentacja | ⏳ |
+| 4 | 20.11.2026 | Klient i rezerwacje | ✅ ukończony |
+| 5 | 27.11.2026 | Kompletny projekt i prezentacja | ✅ ukończony |
