@@ -1,3 +1,11 @@
+DROP DATABASE IF EXISTS swisscar_rezerwacje;
+CREATE DATABASE swisscar_rezerwacje
+    DEFAULT CHARACTER SET utf8mb4
+    COLLATE utf8mb4_polish_ci;
+USE swisscar_rezerwacje;
+
+SET NAMES utf8mb4;
+
 CREATE TABLE uzytkownicy (
     id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     imie            VARCHAR(50)  NOT NULL,
@@ -12,7 +20,7 @@ CREATE TABLE uzytkownicy (
     PRIMARY KEY (id),
     CONSTRAINT uq_uzytkownicy_email UNIQUE (email),
     CONSTRAINT chk_uzytkownicy_aktywny CHECK (aktywny IN (0, 1))
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE kategorie_uslug (
     id       INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -22,7 +30,7 @@ CREATE TABLE kategorie_uslug (
     PRIMARY KEY (id),
     CONSTRAINT uq_kategorie_nazwa UNIQUE (nazwa),
     CONSTRAINT chk_kategorie_aktywna CHECK (aktywna IN (0, 1))
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE uslugi (
     id                INT UNSIGNED      NOT NULL AUTO_INCREMENT,
@@ -40,7 +48,7 @@ CREATE TABLE uslugi (
     CONSTRAINT chk_uslugi_czas_trwania CHECK (czas_trwania_min > 0 AND czas_trwania_min <= 480),
     CONSTRAINT chk_uslugi_cena CHECK (cena >= 0),
     CONSTRAINT chk_uslugi_aktywna CHECK (aktywna IN (0, 1))
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE pracownicy (
     id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -54,7 +62,7 @@ CREATE TABLE pracownicy (
         FOREIGN KEY (uzytkownik_id) REFERENCES uzytkownicy (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_pracownicy_aktywny CHECK (aktywny IN (0, 1))
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE pracownicy_uslugi (
     pracownik_id  INT UNSIGNED NOT NULL,
@@ -66,7 +74,7 @@ CREATE TABLE pracownicy_uslugi (
     CONSTRAINT fk_pracownicy_uslugi_usluga
         FOREIGN KEY (usluga_id) REFERENCES uslugi (id)
         ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE dostepnosc_pracownikow (
     id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
@@ -81,7 +89,7 @@ CREATE TABLE dostepnosc_pracownikow (
         ON UPDATE CASCADE ON DELETE CASCADE,
     CONSTRAINT chk_dostepnosc_dzien CHECK (dzien_tygodnia BETWEEN 1 AND 7),
     CONSTRAINT chk_dostepnosc_godziny CHECK (godzina_do > godzina_od)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE rezerwacje (
     id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -108,7 +116,7 @@ CREATE TABLE rezerwacje (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_rezerwacje_godziny CHECK (godzina_do > godzina_od),
     CONSTRAINT chk_rezerwacje_cena CHECK (cena >= 0)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE INDEX idx_rezerwacje_pracownik_data ON rezerwacje (pracownik_id, data_rezerwacji, godzina_od);
 CREATE INDEX idx_rezerwacje_data_status ON rezerwacje (data_rezerwacji, status);
@@ -126,7 +134,7 @@ CREATE TABLE dni_wolne (
         FOREIGN KEY (pracownik_id) REFERENCES pracownicy (id)
         ON UPDATE CASCADE ON DELETE CASCADE,
     CONSTRAINT chk_dni_wolne_daty CHECK (data_do >= data_od)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE historia_statusow (
     id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -143,7 +151,7 @@ CREATE TABLE historia_statusow (
     CONSTRAINT fk_historia_zmienil
         FOREIGN KEY (zmienil_id) REFERENCES uzytkownicy (id)
         ON UPDATE CASCADE ON DELETE SET NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 CREATE TABLE dziennik_operacji (
     id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -156,7 +164,17 @@ CREATE TABLE dziennik_operacji (
     CONSTRAINT fk_dziennik_uzytkownik
         FOREIGN KEY (uzytkownik_id) REFERENCES uzytkownicy (id)
         ON UPDATE CASCADE ON DELETE SET NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
+
+CREATE TABLE proby_logowania (
+    id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    email      VARCHAR(150) NOT NULL,
+    adres_ip   VARCHAR(45)  NOT NULL,
+    utworzono  DATETIME     NOT NULL,
+    PRIMARY KEY (id),
+    INDEX idx_proby_email (email, utworzono),
+    INDEX idx_proby_ip (adres_ip, utworzono)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_polish_ci;
 
 INSERT INTO uzytkownicy (id, imie, nazwisko, email, haslo_hash, telefon, rola, aktywny) VALUES
 (1, 'Anna',      'Kowalska',    'admin@swisscar.pl',               '$2y$10$gF0NuUaNjIfks/FMob4mWersZ.AkZXjqubG1i.lDAG6l0djzbn79u', '500100100', 'administrator', 1),
@@ -234,7 +252,15 @@ INSERT INTO rezerwacje (uzytkownik_id, pracownik_id, usluga_id, data_rezerwacji,
 (6, 3, 4,  '2026-11-06', '13:00', '13:45', 120.00, 'oczekujaca',   NULL),
 (7, 2, 10, '2026-11-07', '10:00', '10:45',   0.00, 'oczekujaca',   'Odbiór Volvo XC60.'),
 (8, 3, 3,  '2026-11-09', '12:00', '12:30',  80.00, 'oczekujaca',   NULL),
-(5, 1, 10, '2026-11-12', '15:00', '15:45',   0.00, 'potwierdzona', 'Odbiór Audi A6.');
+(5, 1, 10, '2026-11-12', '15:00', '15:45',   0.00, 'potwierdzona', 'Odbiór Audi A6.'),
+(7, 1, 3,  '2026-11-16', '10:00', '10:30',  80.00, 'zrealizowana', NULL),
+(8, 2, 8,  '2026-11-17', '14:00', '14:45', 180.00, 'zrealizowana', NULL),
+(5, 1, 2,  '2026-11-23', '09:00', '09:30', 100.00, 'potwierdzona', 'Kia Sportage 2022.'),
+(6, 3, 4,  '2026-11-23', '14:00', '14:45', 120.00, 'oczekujaca',   NULL),
+(7, 2, 9,  '2026-11-24', '10:00', '11:00', 250.00, 'potwierdzona', NULL),
+(8, 1, 1,  '2026-11-25', '11:00', '12:00', 150.00, 'oczekujaca',   'Porsche Macan 2019.'),
+(6, 2, 7,  '2026-11-26', '12:00', '13:30', 300.00, 'oczekujaca',   NULL),
+(5, 3, 6,  '2026-11-27', '16:00', '17:00', 200.00, 'potwierdzona', NULL);
 
 INSERT INTO historia_statusow (rezerwacja_id, stary_status, nowy_status, zmienil_id, utworzono) VALUES
 (7,  NULL,         'oczekujaca',   5, '2026-10-01 18:20:00'),
